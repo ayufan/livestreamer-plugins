@@ -9,14 +9,16 @@ from livestreamer.stream import RTMPStream
 from livestreamer.logger import LoggerModule
 
 SWF_URL = "http://showup.tv/flash/suStreamer.swf"
-UID = '%032x' % random.getrandbits(128)
+RANDOM_UID = '%032x' % random.getrandbits(128)
+JSON_UID = '{"id":0,"value":["{uid}",""]}'
+JSON_CHANNEL = '{"id":2,"value":["{channel_name}"]}'
+
+_url_re = re.compile(r"http(s)?://(\w+.)?showup.tv/(?P<channel>[A-Za-z0-9_-]+)")
 _websocket_url_re = re.compile(r"startChildBug\(.*'(?P<ws>[\w.]+:\d+)'\);")
 _rtmp_url_re = re.compile(r"var\s+srvE\s+=\s+'(?P<rtmp>rtmp://.*[^;])';")
-_url_re = re.compile(r"http(s)?://(\w+.)?showup.tv/(?P<channel>[A-Za-z0-9_-]+)")
 _schema = validate.Schema(validate.get("value"))
 
-
-class SimpleWebSocketClient:
+class SimpleWebSocketClient():
     def __init__ (self):
         self.socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         
@@ -51,8 +53,7 @@ class SimpleWebSocketClient:
         self.socket.send(header)
         result = self.socket.recv(1024)
         return "Switching Protocols" in result
-          
-        
+       
     def connect(self,websocket_url):
         if 'ws://' not in websocket_url:
             return False
@@ -75,9 +76,9 @@ class ShowUp(Plugin):
     def _get_stream_id(self,channel, websocket):
         ws = SimpleWebSocketClient()
         if not ws.connect(websocket):
-            return ''
-        ws.send('{"id":0,"value":["%s",""]}' % UID)
-        ws.send('{"id":2,"value":["%s"]}' % channel)
+            return None
+        ws.send(JSON_UID.format(uid=RANDOM_UID))
+        ws.send(JSON_CHANNEL.format(channel_name = channel))
         result =  ws.recv()
         ws.close()
         data = utils.parse_json(result, schema=_schema)
@@ -87,6 +88,7 @@ class ShowUp(Plugin):
         websocket = _websocket_url_re.search(html)
         if websocket:
             return "ws://%s" % websocket.group("ws")
+            
     def _get_rtmp(self,html):
         rtmp = _rtmp_url_re.search(html)
         if rtmp:
@@ -94,24 +96,23 @@ class ShowUp(Plugin):
         
     def _get_streams(self):
         url_match = _url_re.match(self.url)
-        if url_match:
-            channel = url_match.group("channel")
-            http.parse_headers('Referer: %s'%self.url)
-            http.parse_cookies('accept_rules=true')
-            page = http.get(self.url)
-            websocket = self._get_websocket(page.text)
-            rtmp = self._get_rtmp(page.text)
-            stream_id = self._get_stream_id(channel,websocket)
-            self.logger.debug(u'Channel name: %s' % channel)
-            self.logger.debug(u'WebSocket: %s' % websocket)
-            self.logger.debug(u'Stream ID: %s' % stream_id)
-            self.logger.debug(u'RTMP Url: %s' % "{0}/{1}".format(rtmp, stream_id))
-            stream = RTMPStream(self.session, {
-                "rtmp": "{0}/{1}".format(rtmp, stream_id),
-                "pageUrl": self.url,
-                "swfVfy": SWF_URL,
-                "live": True
-            })
-            return {'live' : stream}
+        channel = url_match.group("channel")
+        http.parse_headers('Referer: %s'%self.url)
+        http.parse_cookies('accept_rules=true')
+        page = http.get(self.url)
+        websocket = self._get_websocket(page.text)
+        rtmp = self._get_rtmp(page.text)
+        stream_id = self._get_stream_id(channel,websocket)
+        self.logger.debug(u'Channel name: %s' % channel)
+        self.logger.debug(u'WebSocket: %s' % websocket)
+        self.logger.debug(u'Stream ID: %s' % stream_id)
+        self.logger.debug(u'RTMP Url: %s' % "{0}/{1}".format(rtmp, stream_id))
+        stream = RTMPStream(self.session, {
+            "rtmp": "{0}/{1}".format(rtmp, stream_id),
+            "pageUrl": self.url,
+            "swfVfy": SWF_URL,
+            "live": True
+        })
+        return {'live' : stream}
 
 __plugin__ = ShowUp
