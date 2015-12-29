@@ -5,10 +5,10 @@ from livestreamer.plugin import Plugin
 from livestreamer.plugin.api import http, validate
 from livestreamer.stream import HTTPStream
 
-URL_SEARCH = "http://getmedia.redefine.pl/vods/search/?vod_limit=50&page=0&keywords={keywords}"
+URL_SEARCH = u"http://getmedia.redefine.pl/vods/search/?vod_limit=50&page=0&keywords={keywords}"
 USER_AGENT = "mipla/23"
 _ipla_protocol_re = re.compile(r"ipla://[^|]+\|(?P<media_id>\w+)")
-_ipla_title_re = re.compile('<meta content="(?P<title>.*)" property="ipla:title" />')
+_ipla_title_re = re.compile(r'<meta content="(?P<title>.*)" property="ipla:title" />')
 _url_re = re.compile(r"(?:https?:\/\/)?(?:www.)?ipla\.tv/.*")
 _playlist_schema = validate.Schema(
     validate.xml_findall(".//vod"),
