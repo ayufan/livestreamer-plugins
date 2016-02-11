@@ -64,7 +64,10 @@ class IPLA(Plugin):
             title = title_match.group("title")    
             media_id = media_id_match.group("media_id")
             res = http.get(URL_SEARCH.format(keywords=title), headers = {'user-agent': USER_AGENT})
-            data = http.xml(res, schema=_playlist_schema)
+            try:
+                data = http.xml(res, schema=_playlist_schema)
+            except Exception:
+                return None
             return self._get_all_streams(data,media_id)
 
 __plugin__ = IPLA

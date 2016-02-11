@@ -47,7 +47,10 @@ class TvpVod(Plugin):
         if url_match:
             video_id = url_match.group("video_id")
             res = http.get(PLAYLIST_URL.format(video_id=video_id))
-            data = http.json(res, schema=_playlist_schema)
+            try:
+                data = http.json(res, schema=_playlist_schema)
+            except Exception:
+                return None
             mapper = StreamMapper(cmp=lambda mimetype, video: video["mimeType"] == mimetype)
             mapper.map("video/mp4", self._create_http_streams)
             mapper.map("application/x-mpegurl", self._create_hls_streams)

@@ -55,7 +55,10 @@ class TvnPlayer(Plugin):
         if url_match:
             video_id = url_match.group("video_id")
             res = http.get(PLAYLIST_URL.format(video_id=video_id))
-            data = http.json(res, schema=_playlist_schema)
+            try:
+                data = http.json(res, schema=_playlist_schema)
+            except Exception:
+                return None
             return self._get_all_streams(data)
 
 __plugin__ = TvnPlayer

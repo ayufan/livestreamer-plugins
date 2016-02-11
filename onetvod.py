@@ -50,7 +50,10 @@ class OnetVod(Plugin):
         if video_id_match:
             video_id = video_id_match.group("video_id")
             res = http.get(PLAYLIST_URL.format(video_id=video_id))
-            data = http.json(res, schema=_playlist_schema)
+            try:
+                data = http.json(res, schema=_playlist_schema)
+            except Exception:
+                return None
             mapper = StreamMapper(cmp=lambda bitrate_mode, video: video["video_bitrate_mode"] == bitrate_mode)
             mapper.map("constant", self._create_http_stream)
             return mapper(data)
